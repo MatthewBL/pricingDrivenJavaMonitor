@@ -6,12 +6,12 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>io.github.isa-group</groupId>
-	<artifactId>Pricing4Java</artifactId>
-	<version>4.0.1</version>
+	<artifactId>PricingDrivenJavaMonitor</artifactId>
+	<version>1.0.0</version>
 
 	<name>${project.groupId}:${project.artifactId}</name>
-	<description>A pricing driven feature toggling library for java</description>
-	<url>https://github.com/Alex-GF/pricingplans-4j</url>
+	<description>A resource consumption monitor for Spring projects based on pricing plans</description>
+	<url>https://github.com/MatthewBL/pricingDrivenJavaMonitor.git</url>
 	<packaging>jar</packaging>
 
 	<licenses>
@@ -24,17 +24,17 @@
 
 	<developers>
 		<developer>
-			<name>Alejandro García Fernández</name>
-			<email>agarcia29@us.es</email>
+			<name>Matthew Bwye Lera</name>
+			<email>mbwye@us.es</email>
 			<organization>ISA Group</organization>
 			<organizationUrl>https://github.com/isa-group</organizationUrl>
 		</developer>
 	</developers>
 
 	<scm>
-		<connection>scm:git:git://github.com/Alex-GF/pricingplans-4j.git</connection>
-		<developerConnection>scm:git:ssh://github.com/Alex-GF/pricingplans-4j.git</developerConnection>
-		<url>https://github.com/Alex-GF/pricingplans-4j/tree/main</url>
+		<connection>scm:git:git://github.com/MatthewBL/pricingDrivenJavaMonitor.git</connection>
+		<developerConnection>scm:git:ssh://github.com/MatthewBL/pricingDrivenJavaMonitor.git</developerConnection>
+		<url>https://github.com/MatthewBL/pricingDrivenJavaMonitor.git</url>
 	</scm>
 
 	<distributionManagement>
@@ -51,7 +51,7 @@
 	<properties>
 		<jackson.version>2.14.2</jackson.version>
 		<aspectj.version>1.9.7</aspectj.version>
-		<spring.version>6.1.5</spring.version>
+		<spring.version>6.1.9</spring.version>
 		<spring.boot.version>3.2.0</spring.boot.version>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
@@ -65,118 +65,38 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 			<version>${spring.boot.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-cache</artifactId>
-			<version>${spring.boot.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-			<version>${spring.boot.version}</version>
-		</dependency>
-
-		<dependency> 
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-aop</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-			<version>${spring.boot.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<version>${spring.boot.version}</version>
-			<scope>test</scope>
-		</dependency>
-
-		<!-- SPRING SPEL -->
 
 		<dependency>
 			<groupId>org.springframework</groupId>
-			<artifactId>spring-expression</artifactId>
+			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- ASPECTJ -->
-
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjrt</artifactId>
-			<version>${aspectj.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjweaver</artifactId>
-			<version>${aspectj.version}</version>
-		</dependency>
-
-		<!-- LOGGER -->
-
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>2.0.7</version>
 		</dependency>
 		
-		<!-- LOMBOK -->
-
+		<!-- OpenTelemetry SDK -->
 		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<version>1.18.30</version> <!--$NO-MVN-MAN-VER$-->
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-sdk</artifactId>
+			<version>1.7.0</version>
 		</dependency>
 
-		<!-- JUNIT -->
-
+		<!-- Jaeger Exporter -->
 		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-api</artifactId>
-			<version>5.10.2</version>
-			<scope>test</scope>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-exporter-jaeger</artifactId>
+			<version>1.7.0</version>
 		</dependency>
 
-		<!-- JSON WEB TOKEN -->
+		<!-- Javax.servlet -->
 		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt</artifactId>
-			<version>0.9.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-			<version>20230227</version>
-		</dependency>
-
-		<!-- YAML PARSER -->
-		<dependency>
-			<groupId>org.yaml</groupId>
-			<artifactId>snakeyaml</artifactId>
-			<version>1.33</version>
-		</dependency>
-
-		<!-- API, java.xml.bind module -->
-		<dependency>
-			<groupId>jakarta.xml.bind</groupId>
-			<artifactId>jakarta.xml.bind-api</artifactId>
-			<version>2.3.2</version>
-		</dependency>
-
-		<!-- Runtime, com.sun.xml.bind module -->
-		<dependency>
-			<groupId>org.glassfish.jaxb</groupId>
-			<artifactId>jaxb-runtime</artifactId>
-			<version>2.3.2</version>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>4.0.1</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
-		<finalName>Pricing4Java</finalName>
+		<finalName>PricingDrivenJavaMonitor</finalName>
 		<plugins>
 
 
