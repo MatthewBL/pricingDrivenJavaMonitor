@@ -51,7 +51,7 @@
 	<properties>
 		<jackson.version>2.14.2</jackson.version>
 		<aspectj.version>1.9.7</aspectj.version>
-		<spring.version>6.1.9</spring.version>
+		<spring.version>5.3.9</spring.version>
 		<spring.boot.version>3.2.0</spring.boot.version>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
@@ -71,6 +71,13 @@
 			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
 		</dependency>
+
+		
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
 		
 		<!-- OpenTelemetry SDK -->
 		<dependency>
@@ -92,6 +99,13 @@
 			<artifactId>javax.servlet-api</artifactId>
 			<version>4.0.1</version>
 			<scope>provided</scope>
+		</dependency>
+
+		<!-- Pricing4Java -->
+		<dependency>
+			<groupId>io.github.isa-group</groupId>
+			<artifactId>Pricing4Java</artifactId>
+			<version>4.0.1</version>
 		</dependency>
 	</dependencies>
 
