@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,6 +29,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class MonitoringInterceptor implements HandlerInterceptor {
     private final ConcurrentMap<String, String> ongoingRequests = new ConcurrentHashMap<>();
+    private final Map<String, String> accumulatedData = new HashMap<>();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
@@ -58,19 +60,26 @@ public class MonitoringInterceptor implements HandlerInterceptor {
     }
     
     @Scheduled(fixedRate = 5000) // runs every 5 seconds
-    public void exportOngoingRequestsToCsv() {
-        try (FileWriter writer = new FileWriter("ongoing_requests.csv")) {
+    public void storeOngoingRequestsInMap() {
+        String timestamp = DATE_FORMAT.format(new Date());
+        for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
+            accumulatedData.put(timestamp + ", " + entry.getKey(), entry.getValue());
+        }
+        System.out.println("Stored ongoing requests in map at " + timestamp);
+    }
+
+    @Scheduled(fixedRate = 120000) // runs every 2 minutes
+    public void exportAccumulatedDataToCsv() {
+        try (FileWriter writer = new FileWriter("ongoing_requests.csv", true)) {
             writer.append("Timestamp, Request ID, URI, Method\n");
-            String timestamp = DATE_FORMAT.format(new Date());
-            for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
-                writer.append(timestamp)
-                      .append(", ")
-                      .append(entry.getKey())
+            for (Map.Entry<String, String> entry : accumulatedData.entrySet()) {
+                writer.append(entry.getKey())
                       .append(", ")
                       .append(entry.getValue())
                       .append("\n");
             }
-            System.out.println("Exported ongoing requests to CSV at " + timestamp);
+            accumulatedData.clear();
+            System.out.println("Exported accumulated data to CSV and cleared the map");
         } catch (IOException e) {
             e.printStackTrace();
         }
