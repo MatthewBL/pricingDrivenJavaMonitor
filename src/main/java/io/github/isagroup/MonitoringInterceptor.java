@@ -5,6 +5,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import io.github.isagroup.services.jwt.PricingJwtUtils;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.UUID;
@@ -28,6 +30,9 @@ public class MonitoringInterceptor implements HandlerInterceptor {
     private final ConcurrentMap<String, String> ongoingRequests = new ConcurrentHashMap<>();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    @Autowired
+    private PricingContext pricingContext;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String requestId = UUID.randomUUID().toString();
@@ -35,7 +40,7 @@ public class MonitoringInterceptor implements HandlerInterceptor {
         String uri = request.getRequestURI();
         String method = request.getMethod();
 
-        ongoingRequests.put(requestId, uri + ", " + method);
+        ongoingRequests.put(requestId, uri + ", " + method + ", " + pricingContext.getUserPlan());
 
         request.setAttribute("requestId", requestId);
 
