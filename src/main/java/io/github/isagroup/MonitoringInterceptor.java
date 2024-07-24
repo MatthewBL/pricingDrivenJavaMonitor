@@ -26,6 +26,9 @@ import java.util.HashMap;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+
 @Component
 public class MonitoringInterceptor implements HandlerInterceptor {
     private final ConcurrentMap<String, String> ongoingRequests = new ConcurrentHashMap<>();
@@ -56,22 +59,27 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
         String requestId = (String) request.getAttribute("requestId");
 
-        ongoingRequests.remove(requestId);
+        //ongoingRequests.remove(requestId);
     }
     
     @Scheduled(fixedRate = 5000) // runs every 5 seconds
     public void storeOngoingRequestsInMap() {
         String timestamp = DATE_FORMAT.format(new Date());
+
+        // Measure CPU usage
+        OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
+        double cpuLoad = osBean.getSystemLoadAverage();
+
         for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
-            accumulatedData.put(timestamp + ", " + entry.getKey(), entry.getValue());
+            accumulatedData.put(timestamp + ", " + entry.getKey() + ", CPU Load: " + cpuLoad, entry.getValue());
         }
-        System.out.println("Stored ongoing requests in map at " + timestamp);
+        System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + cpuLoad);
     }
 
     @Scheduled(fixedRate = 120000) // runs every 2 minutes
     public void exportAccumulatedDataToCsv() {
         try (FileWriter writer = new FileWriter("ongoing_requests.csv", true)) {
-            writer.append("Timestamp, Request ID, URI, Method\n");
+            writer.append("Timestamp, Request ID, URI, Method, CPU Load\n");
             for (Map.Entry<String, String> entry : accumulatedData.entrySet()) {
                 writer.append(entry.getKey())
                       .append(", ")
