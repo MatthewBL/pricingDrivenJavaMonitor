@@ -13,21 +13,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
+import com.sun.management.OperatingSystemMXBean;
 
 @Component
 public class MonitoringInterceptor implements HandlerInterceptor {
@@ -59,21 +54,21 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
         String requestId = (String) request.getAttribute("requestId");
 
-        //ongoingRequests.remove(requestId);
+        ongoingRequests.remove(requestId);
     }
-    
+
     @Scheduled(fixedRate = 5000) // runs every 5 seconds
     public void storeOngoingRequestsInMap() {
         String timestamp = DATE_FORMAT.format(new Date());
 
         // Measure CPU usage
-        OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-        double cpuLoad = osBean.getSystemLoadAverage();
+        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        double cpuLoad = osBean.getSystemCpuLoad() * 100;
 
         for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
-            accumulatedData.put(timestamp + ", " + entry.getKey() + ", CPU Load: " + cpuLoad, entry.getValue());
+            accumulatedData.put(timestamp + ", " + entry.getKey() + ", CPU Load: " + String.format("%.2f", cpuLoad) + "%", entry.getValue());
         }
-        System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + cpuLoad);
+        System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + cpuLoad + "%");
     }
 
     @Scheduled(fixedRate = 120000) // runs every 2 minutes
