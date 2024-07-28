@@ -63,7 +63,7 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
         // Measure CPU usage
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        double cpuLoad = osBean.getSystemCpuLoad() * 100;
+        double cpuLoad = osBean.getSystemCpuLoad();
 
         for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
             accumulatedData.put(timestamp + ", " + entry.getKey() + ", CPU Load: " + String.format("%.2f", cpuLoad) + "%", entry.getValue());
