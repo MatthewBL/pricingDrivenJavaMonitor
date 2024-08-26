@@ -5,18 +5,18 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import io.github.isagroup.services.jwt.PricingJwtUtils;
-
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,9 +29,13 @@ public class MonitoringInterceptor implements HandlerInterceptor {
     private final ConcurrentMap<String, String> ongoingRequests = new ConcurrentHashMap<>();
     private final Map<String, String> accumulatedData = new HashMap<>();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Autowired
     private PricingContext pricingContext;
+
+    @Autowired
+    private MonitoringConfig monitoringConfig;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -54,10 +58,11 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
         String requestId = (String) request.getAttribute("requestId");
 
-        ongoingRequests.remove(requestId);
+        // Schedule the removal of the ongoing request after the configured delay
+        scheduler.schedule(() -> ongoingRequests.remove(requestId), monitoringConfig.getDelayAfterCompletion(), TimeUnit.MILLISECONDS);
     }
 
-    @Scheduled(fixedRate = 5000) // runs every 5 seconds
+    @Scheduled(fixedRateString = "${monitoring.fixedRate.store}") // runs every configured interval
     public void storeOngoingRequestsInMap() {
         String timestamp = DATE_FORMAT.format(new Date());
 
@@ -71,7 +76,7 @@ public class MonitoringInterceptor implements HandlerInterceptor {
         System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + cpuLoad + "%");
     }
 
-    @Scheduled(fixedRate = 120000) // runs every 2 minutes
+    @Scheduled(fixedRateString = "${monitoring.fixedRate.export}") // runs every configured interval
     public void exportAccumulatedDataToCsv() {
         try (FileWriter writer = new FileWriter("ongoing_requests.csv", true)) {
             writer.append("Timestamp, Request ID, URI, Method, CPU Load\n");
