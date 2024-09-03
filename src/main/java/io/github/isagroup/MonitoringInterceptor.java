@@ -1,6 +1,7 @@
 package io.github.isagroup;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -34,8 +35,8 @@ public class MonitoringInterceptor implements HandlerInterceptor {
     @Autowired
     private PricingContext pricingContext;
 
-    @Autowired
-    private MonitoringConfig monitoringConfig;
+    @Value("${monitoring.delay.afterCompletion}")
+    private long delayAfterCompletion;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -59,7 +60,7 @@ public class MonitoringInterceptor implements HandlerInterceptor {
         String requestId = (String) request.getAttribute("requestId");
 
         // Schedule the removal of the ongoing request after the configured delay
-        scheduler.schedule(() -> ongoingRequests.remove(requestId), monitoringConfig.getDelayAfterCompletion(), TimeUnit.MILLISECONDS);
+        scheduler.schedule(() -> ongoingRequests.remove(requestId), delayAfterCompletion, TimeUnit.MILLISECONDS);
     }
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.store}") // runs every configured interval
