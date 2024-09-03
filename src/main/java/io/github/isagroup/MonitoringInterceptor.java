@@ -38,6 +38,9 @@ public class MonitoringInterceptor implements HandlerInterceptor {
     @Value("${monitoring.delay.afterCompletion}")
     private long delayAfterCompletion;
 
+    @Value("${monitoring.individualMonitoring.enabled}")
+    private boolean individualMonitoringEnabled;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String requestId = UUID.randomUUID().toString();
@@ -59,12 +62,25 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
         String requestId = (String) request.getAttribute("requestId");
 
+        if (individualMonitoringEnabled) {
+            addDataToAccumulatedData();
+            writeAccumulatedDataToCsv();
+        }
+
         // Schedule the removal of the ongoing request after the configured delay
         scheduler.schedule(() -> ongoingRequests.remove(requestId), delayAfterCompletion, TimeUnit.MILLISECONDS);
     }
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.store}") // runs every configured interval
     public void storeOngoingRequestsInMap() {
+        if (individualMonitoringEnabled) {
+            return;
+        }
+
+        addDataToAccumulatedData();
+    }
+
+    private void addDataToAccumulatedData() {
         String timestamp = DATE_FORMAT.format(new Date());
 
         // Measure CPU usage
@@ -79,6 +95,14 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.export}") // runs every configured interval
     public void exportAccumulatedDataToCsv() {
+        if (individualMonitoringEnabled) {
+            return;
+        }
+
+        writeAccumulatedDataToCsv();
+    }
+
+    public void writeAccumulatedDataToCsv() {
         try (FileWriter writer = new FileWriter("ongoing_requests.csv", true)) {
             writer.append("Timestamp, Request ID, URI, Method, CPU Load\n");
             for (Map.Entry<String, String> entry : accumulatedData.entrySet()) {
