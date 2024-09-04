@@ -1,0 +1,56 @@
+1.- Installing the package
+
+mvn install:install-file -Dfile="C:\Users\Hola Isa\Documents\Tareas\TFM\Implementacion\pricingDrivenJavaMonitor\target\PricingDrivenJavaMonitor.jar" -DgroupId="io.github.isagroup" -DartifactId="monitoring-interceptor" -Dversion="1.0" -Dpackaging=jar
+
+
+2.- Adding the dependency
+
+    <dependency>
+      <groupId>io.github.isagroup</groupId>
+      <artifactId>monitoring-interceptor</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+
+3.- Enabling Component Scanning and Scheduling
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@ComponentScan(basePackages = {"io.github.isagroup", "org.springframework.samples.petclinic"})
+@EnableScheduling
+public class MySpringApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MySpringApplication.class, args);
+    }
+}
+
+
+4.- Configure Properties
+
+monitoring.individualMonitoring.enabled=true
+monitoring.delay.afterCompletion=3000
+monitoring.fixedRate.store=5000
+monitoring.fixedRate.export=120000
+
+
+5.- Use interceptor
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Autowired
+    private MonitoringInterceptor monitoringInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(monitoringInterceptor);
+    }
+}
