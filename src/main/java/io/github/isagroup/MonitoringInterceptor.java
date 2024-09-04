@@ -85,12 +85,21 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
         // Measure CPU usage
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        double cpuLoad = osBean.getSystemCpuLoad();
+        double cpuLoad = osBean.getSystemCpuLoad() * 100;
+        long totalPhysicalMemorySize = osBean.getTotalPhysicalMemorySize();
+        long freePhysicalMemorySize = osBean.getFreePhysicalMemorySize();
+        long usedPhysicalMemorySize = totalPhysicalMemorySize - freePhysicalMemorySize;
+        long usedMemoryInGB = usedPhysicalMemorySize / (1024 * 1024 * 1024);
 
         for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
-            accumulatedData.put(timestamp + ", " + entry.getKey() + ", CPU Load: " + String.format("%.2f", cpuLoad) + "%", entry.getValue());
+            accumulatedData.put(timestamp + 
+                                ", " + entry.getKey(), 
+                                entry.getValue() + 
+                                ", CPU Load: " + String.format("%.2f", cpuLoad) + "%" +
+                                ", Memory Load: " + String.format("%.2f", usedMemoryInGB) + "GB");
         }
         System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + cpuLoad + "%");
+        System.out.println("Stored ongoing requests in map at " + timestamp + " with Memory load: " + usedMemoryInGB + "GB");
     }
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.export}") // runs every configured interval
@@ -104,7 +113,7 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     public void writeAccumulatedDataToCsv() {
         try (FileWriter writer = new FileWriter("ongoing_requests.csv", true)) {
-            writer.append("Timestamp, Request ID, URI, Method, CPU Load\n");
+            writer.append("Timestamp, Request ID, URI, Method, Pricing, CPU Load, Memory Load\n");
             for (Map.Entry<String, String> entry : accumulatedData.entrySet()) {
                 writer.append(entry.getKey())
                       .append(", ")
