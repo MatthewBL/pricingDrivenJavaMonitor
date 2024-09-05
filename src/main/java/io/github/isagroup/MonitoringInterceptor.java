@@ -41,8 +41,15 @@ public class MonitoringInterceptor implements HandlerInterceptor {
     @Value("${monitoring.individualMonitoring.enabled}")
     private boolean individualMonitoringEnabled;
 
+    @Value("${monitoring.enabled}")
+    private boolean monitoringEnabled;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if (!monitoringEnabled) {
+            return true;
+        }
+
         String requestId = UUID.randomUUID().toString();
 
         String uri = request.getRequestURI();
@@ -58,6 +65,10 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        if (!monitoringEnabled) {
+            return;
+        }
+
         System.out.println("After completing the request: " + request.getRequestURI());
 
         String requestId = (String) request.getAttribute("requestId");
@@ -73,6 +84,10 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.store}") // runs every configured interval
     public void storeOngoingRequestsInMap() {
+        if (!monitoringEnabled) {
+            return;
+        }
+
         if (individualMonitoringEnabled) {
             return;
         }
@@ -82,28 +97,36 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     private void addDataToAccumulatedData() {
         String timestamp = DATE_FORMAT.format(new Date());
-
+    
         // Measure CPU usage
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
         double cpuLoad = osBean.getSystemCpuLoad() * 100;
         long totalPhysicalMemorySize = osBean.getTotalPhysicalMemorySize();
         long freePhysicalMemorySize = osBean.getFreePhysicalMemorySize();
         long usedPhysicalMemorySize = totalPhysicalMemorySize - freePhysicalMemorySize;
-        long usedMemoryInGB = usedPhysicalMemorySize / (1024 * 1024 * 1024);
-
+        double usedMemoryInGB = (double) usedPhysicalMemorySize / (1024 * 1024 * 1024);
+    
         for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
             accumulatedData.put(timestamp + 
                                 ", " + entry.getKey(), 
                                 entry.getValue() + 
                                 ", CPU Load: " + String.format("%.2f", cpuLoad) + "%" +
-                                ", Memory Load: " + String.format("%.2f", usedMemoryInGB) + "GB");
+                                ", Memory Load: " + String.format("%.6f", usedMemoryInGB) + "GB");
         }
-        System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + cpuLoad + "%");
-        System.out.println("Stored ongoing requests in map at " + timestamp + " with Memory load: " + usedMemoryInGB + "GB");
+        System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + String.format("%.2f", cpuLoad) + "%");
+        System.out.println("Stored ongoing requests in map at " + timestamp + " with Memory load: " + String.format("%.6f", usedMemoryInGB) + "GB");
+    
+        if (individualMonitoringEnabled) {
+            ongoingRequests.clear();
+        }
     }
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.export}") // runs every configured interval
     public void exportAccumulatedDataToCsv() {
+        if (!monitoringEnabled) {
+            return;
+        }
+
         if (individualMonitoringEnabled) {
             return;
         }
@@ -125,5 +148,32 @@ public class MonitoringInterceptor implements HandlerInterceptor {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void warmUpCpuLoad() {
+        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        double cpuLoad = 0.0;
+        int warmUpTries = 0;
+        
+        // Keep trying until we get a value that isn't 0% or 100% (max 100 tries)
+        while ((cpuLoad == 0.0 || cpuLoad == 1.0) && warmUpTries < 100) {
+            cpuLoad = osBean.getSystemCpuLoad();
+            warmUpTries++;
+            try {
+                Thread.sleep(1000); // 1 second delay
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        System.out.println("CPU Load warmed up: " + cpuLoad * 100 + "% after " + warmUpTries + " tries.");
+    }
+
+    @Scheduled(fixedRateString = "${monitoring.CPU.update}")
+    public void scheduleCpuLoadMonitoring() {
+        if (!monitoringEnabled) {
+            return;
+        }
+        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        osBean.getSystemCpuLoad();
     }
 }
