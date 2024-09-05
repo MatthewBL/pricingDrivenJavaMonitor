@@ -27,7 +27,7 @@ import com.sun.management.OperatingSystemMXBean;
 
 @Component
 public class MonitoringInterceptor implements HandlerInterceptor {
-    private final ConcurrentMap<String, String> ongoingRequests = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, RequestData> ongoingRequests = new ConcurrentHashMap<>();
     private final Map<String, String> accumulatedData = new HashMap<>();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -46,16 +46,13 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if (!monitoringEnabled) {
-            return true;
-        }
 
         String requestId = UUID.randomUUID().toString();
-
         String uri = request.getRequestURI();
         String method = request.getMethod();
+        long startTime = System.currentTimeMillis();
 
-        ongoingRequests.put(requestId, uri + ", " + method + ", " + pricingContext.getUserPlan());
+        ongoingRequests.put(requestId, new RequestData(uri, method, pricingContext.getUserPlan(), startTime));
 
         request.setAttribute("requestId", requestId);
 
@@ -65,9 +62,6 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        if (!monitoringEnabled) {
-            return;
-        }
 
         System.out.println("After completing the request: " + request.getRequestURI());
 
@@ -84,10 +78,6 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.store}") // runs every configured interval
     public void storeOngoingRequestsInMap() {
-        if (!monitoringEnabled) {
-            return;
-        }
-
         if (individualMonitoringEnabled) {
             return;
         }
@@ -97,25 +87,45 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     private void addDataToAccumulatedData() {
         String timestamp = DATE_FORMAT.format(new Date());
-    
-        // Measure CPU usage
-        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        double cpuLoad = osBean.getSystemCpuLoad() * 100;
-        long totalPhysicalMemorySize = osBean.getTotalPhysicalMemorySize();
-        long freePhysicalMemorySize = osBean.getFreePhysicalMemorySize();
-        long usedPhysicalMemorySize = totalPhysicalMemorySize - freePhysicalMemorySize;
-        double usedMemoryInGB = (double) usedPhysicalMemorySize / (1024 * 1024 * 1024);
-    
-        for (Map.Entry<String, String> entry : ongoingRequests.entrySet()) {
-            accumulatedData.put(timestamp + 
-                                ", " + entry.getKey(), 
-                                entry.getValue() + 
-                                ", CPU Load: " + String.format("%.2f", cpuLoad) + "%" +
-                                ", Memory Load: " + String.format("%.6f", usedMemoryInGB) + "GB");
+
+        if (monitoringEnabled) {
+            // Measure CPU usage
+            OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+            double cpuLoad = osBean.getSystemCpuLoad() * 100;
+            long totalPhysicalMemorySize = osBean.getTotalPhysicalMemorySize();
+            long freePhysicalMemorySize = osBean.getFreePhysicalMemorySize();
+            long usedPhysicalMemorySize = totalPhysicalMemorySize - freePhysicalMemorySize;
+            double usedMemoryInGB = (double) usedPhysicalMemorySize / (1024 * 1024 * 1024);
+
+            for (Map.Entry<String, RequestData> entry : ongoingRequests.entrySet()) {
+                RequestData requestData = entry.getValue();
+                long elapsedTime = System.currentTimeMillis() - requestData.getStartTime();
+                accumulatedData.put(timestamp + 
+                                    ", " + entry.getKey(), 
+                                    requestData.getUri() + ", " + 
+                                    requestData.getMethod() + ", " + 
+                                    requestData.getUserPlan() + ", " + 
+                                    elapsedTime + "ms, " + 
+                                    "CPU Load: " + String.format("%.2f", cpuLoad) + "%" +
+                                    ", Memory Load: " + String.format("%.6f", usedMemoryInGB) + "GB");
+            }
+            System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + String.format("%.2f", cpuLoad) + "%");
+            System.out.println("Stored ongoing requests in map at " + timestamp + " with Memory load: " + String.format("%.6f", usedMemoryInGB) + "GB");
         }
-        System.out.println("Stored ongoing requests in map at " + timestamp + " with CPU load: " + String.format("%.2f", cpuLoad) + "%");
-        System.out.println("Stored ongoing requests in map at " + timestamp + " with Memory load: " + String.format("%.6f", usedMemoryInGB) + "GB");
-    
+        else {
+            for (Map.Entry<String, RequestData> entry : ongoingRequests.entrySet()) {
+                RequestData requestData = entry.getValue();
+                long elapsedTime = System.currentTimeMillis() - requestData.getStartTime();
+                accumulatedData.put(timestamp + 
+                                    ", " + entry.getKey(), 
+                                    requestData.getUri() + ", " + 
+                                    requestData.getMethod() + ", " + 
+                                    requestData.getUserPlan() + ", " + 
+                                    elapsedTime + "ms");
+            }
+            System.out.println("Stored ongoing requests in map at " + timestamp);
+        }
+
         if (individualMonitoringEnabled) {
             ongoingRequests.clear();
         }
@@ -123,10 +133,6 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     @Scheduled(fixedRateString = "${monitoring.fixedRate.export}") // runs every configured interval
     public void exportAccumulatedDataToCsv() {
-        if (!monitoringEnabled) {
-            return;
-        }
-
         if (individualMonitoringEnabled) {
             return;
         }
@@ -136,7 +142,12 @@ public class MonitoringInterceptor implements HandlerInterceptor {
 
     public void writeAccumulatedDataToCsv() {
         try (FileWriter writer = new FileWriter("ongoing_requests.csv", true)) {
-            writer.append("Timestamp, Request ID, URI, Method, Pricing, CPU Load, Memory Load\n");
+            if (monitoringEnabled) {
+                writer.append("Timestamp, Request ID, URI, Method, Pricing, Elapsed Time, CPU Load, Memory Load\n");
+            }
+            else {
+                writer.append("Timestamp, Request ID, URI, Method, Pricing, Elapsed Time\n");
+            }
             for (Map.Entry<String, String> entry : accumulatedData.entrySet()) {
                 writer.append(entry.getKey())
                       .append(", ")
@@ -175,5 +186,35 @@ public class MonitoringInterceptor implements HandlerInterceptor {
         }
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
         osBean.getSystemCpuLoad();
+    }
+
+    private static class RequestData {
+        private final String uri;
+        private final String method;
+        private final String userPlan;
+        private final long startTime;
+
+        public RequestData(String uri, String method, String userPlan, long startTime) {
+            this.uri = uri;
+            this.method = method;
+            this.userPlan = userPlan;
+            this.startTime = startTime;
+        }
+
+        public String getUri() {
+            return uri;
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+        public String getUserPlan() {
+            return userPlan;
+        }
+
+        public long getStartTime() {
+            return startTime;
+        }
     }
 }
