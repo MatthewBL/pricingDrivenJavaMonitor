@@ -1,6 +1,6 @@
 1.- Installing the package
 
-mvn install:install-file -Dfile="C:\Users\Hola Isa\Documents\Tareas\TFM\Implementacion\pricingDrivenJavaMonitor\target\PricingDrivenJavaMonitor.jar" -DgroupId="io.github.isagroup" -DartifactId="monitoring-interceptor" -Dversion="1.0" -Dpackaging=jar
+mvn install:install-file -Dfile="C:\Users\User\Documents\Tareas\TFM\Implementacion\pricingDrivenJavaMonitor\target\PricingDrivenJavaMonitor.jar" -DgroupId="io.github.isagroup" -DartifactId="monitoring-interceptor" -Dversion="1.0" -Dpackaging=jar
 
 
 2.- Adding the dependency
