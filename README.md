@@ -1,30 +1,61 @@
-# Pricing4Java
+# Instructions
 
-![Maven Central Version](https://img.shields.io/maven-central/v/io.github.isa-group/Pricing4Java)
+1.- Installing the package
 
-Pricing4Java is a Java-based toolkit designed to enhance the server-side functionality of a pricing-driven SaaS by enabling the seamless integration of pricing plans into the application logic. The package provides a suite of components that are predicated on the Yaml4SaaS syntax, a specification that facilitates the definition of system's pricing and its features alongside their respective evaluation expressions, grouping them within plans and add-ons, as well as establishing usage limits.
+mvn install:install-file -Dfile="C:\path\to\pricingDrivenJavaMonitor\target\PricingDrivenJavaMonitor.jar" -DgroupId="io.github.isagroup" -DartifactId="monitoring-interceptor" -Dversion="1.0" -Dpackaging=jar
 
-Pricing4Java has been designed to be used with [Pricing4React](https://github.com/isa-group/Pricing4React), a frontend library that consumes the generated JWT and toggles on and off features based on the user pricing plan.
 
-For detailed information on how to get started with Pricing4Java, advanced configurations, and integration guides, please visit our [official documentation website](https://pricing4saas-docs.vercel.app).
+2.- Adding the dependency
 
-## Installation
-
-Pricing4Java is built to be used with Maven. To install, simply add the following dependencies to your `pom.xml` file:
-
-```xml
-<dependencies>
-    ...
-    <!-- Pricing4Java -->
     <dependency>
-        <groupId>io.github.isa-group</groupId>
-        <artifactId>Pricing4Java</artifactId>
-        <version>{version}</version>
+      <groupId>io.github.isagroup</groupId>
+      <artifactId>monitoring-interceptor</artifactId>
+      <version>1.0</version>
     </dependency>
-    ...
-</dependencies>
-```
 
-## Contributions
 
-This project is part of the research activities of the [ISA Group](https://www.isa.us.es/3.0/). It is still under development and should be used with caution. We are not responsible for any damage caused by the use of this software. If you find any bugs or have any suggestions, please let us know by opening an issue in the [GitHub repository](https://github.com/isa-group/Pricing4Java/issues).
+3.- Enabling Component Scanning and Scheduling, and call the warmUpCpuLoad method
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@ComponentScan(basePackages = {"io.github.isagroup", "org.springframework.samples.petclinic"})
+@EnableScheduling
+public class PetclinicApplication {
+	public static void main(String[] args) {
+		SpringApplication.run(PetclinicApplication.class, args);
+		MonitoringInterceptor.warmUpCpuLoad();
+	}
+}
+
+
+4.- Configure Properties
+
+monitoring.individualMonitoring.enabled=true
+monitoring.delay.afterCompletion=500
+monitoring.fixedRate.store=5000
+monitoring.fixedRate.export=30000
+monitoring.CPU.update=100
+monitoring.enabled=true
+
+
+5.- Use interceptor
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Autowired
+    private MonitoringInterceptor monitoringInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(monitoringInterceptor);
+    }
+}
